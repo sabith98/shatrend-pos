@@ -45,10 +45,20 @@ export const updateProductController = async (req, res) => {
 export const deleteProductController = async (req, res) => {
     try {
 
-        await Product.findOneAndDelete({ _id: req.body.productId })
+        await Product.findOneAndDelete({ _id: req.params.productId })
         res.status(200).json("Product Deleted!");
     } catch (error) {
         res.status(400).send(error);
         console.log(error);
     }
 }
+// export const deleteProductController = async (req, res) => {
+//     try {
+
+//         await Product.findOneAndDelete({ _id: req.body.productId })
+//         res.status(200).json("Product Deleted!");
+//     } catch (error) {
+//         res.status(400).send(error);
+//         console.log(error);
+//     }
+// }
