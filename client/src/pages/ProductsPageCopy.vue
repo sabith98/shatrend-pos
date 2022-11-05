@@ -1,18 +1,15 @@
 <template>
   <q-page class="flex flex-center">
     <div class="q-pa-md table-container">
-      <q-table title="Products" class="q-pa-sm" :rows="storeCustomer.productsData" :columns="columns" row-key="code"
-        :selected-rows-label="getSelectedString" selection="single" v-model:selected="selectedRow" >
-        <!-- <template v-slot:top>
-          <p>Products</p>
-        </template> -->
+      <q-table title="Products" class="q-pa-sm" :rows="productsData" :columns="columns" row-key="code"
+        :selected-rows-label="getSelectedString" selection="single" v-model:selected="selected" >
         <template v-slot:top>
-          <div v-if="selectedRow.length === 0">
-            <q-btn flat round color="green" icon="add" @click="storeCustomer.showProductForm=true">
-              <q-tooltip anchor="top middle" self="bottom middle" :offset="[10, 10]">
+          <q-btn flat round color="green" icon="add" @click="productForm=true">
+            <q-tooltip anchor="top middle" self="bottom middle" :offset="[10, 10]">
                 <strong>Add new product</strong>
               </q-tooltip>
-            </q-btn>
+          </q-btn>
+          <div v-if="selected.length ===0">
             <q-btn flat round class="q-ml-sm disabled" color="primary" icon="edit" >
               <q-tooltip class="bg-red " anchor="top middle" self="bottom middle" :offset="[10, 10]">
                 <strong>No product selected</strong>
@@ -26,11 +23,6 @@
           </div>
 
           <div v-else>
-            <q-btn flat round disabled color="green" icon="add">
-              <q-tooltip anchor="top middle" self="bottom middle" :offset="[10, 10]">
-                <strong>Add new product</strong>
-              </q-tooltip>
-            </q-btn>
             <q-btn flat round class="q-ml-sm" color="primary" icon="edit" @click="editProductFormBtn" >
               <q-tooltip anchor="top middle" self="bottom middle" :offset="[10, 10]">
                 <strong>Edit product</strong>
@@ -48,30 +40,30 @@
               <q-icon name="search" />
             </template>
           </q-input>
-
         </template>
       </q-table>
     </div>
-
-    <!-- New product form dialog begin -->
+    <!-- <NewProduct :medium="medium"/> -->
+    <!-- New product form dialog -->
     <q-dialog
-      v-model="storeCustomer.showProductForm"
+      v-model="productForm"
       persistent
     >
       <q-card style="width: 500px; max-width: 80vw;">
         <q-toolbar>
-          <q-toolbar-title v-if="storeCustomer.isNewProduct"><span class="text-weight-bold">Add new product</span></q-toolbar-title>
+          <q-toolbar-title v-if="isNewProduct"><span class="text-weight-bold">Add new product</span></q-toolbar-title>
           <q-toolbar-title v-else><span class="text-weight-bold">Edit product</span></q-toolbar-title>
-          <q-btn @click="onClosePopup" flat round dense icon="close" v-close-popup />
+          <q-btn flat round dense icon="close" v-close-popup />
         </q-toolbar>
 
         <q-card-section class="q-pt-lg">
           <q-form
+
             class="q-gutter-md"
           >
             <q-input
               outlined
-              v-model="formData.code"
+              v-model="code"
               label="Product code *"
               hint="Unique code to Identify product"
               lazy-rules
@@ -81,7 +73,7 @@
             />
             <q-input
               outlined
-              v-model="formData.name"
+              v-model="name"
               label="Product name *"
               hint="Name of the product"
               lazy-rules
@@ -89,14 +81,14 @@
             />
             <q-input
               outlined
-              v-model="formData.brand"
+              v-model="brand"
               label="Product brand"
               hint="Product manufacturer"
             />
             <q-input
               outlined
               type="number"
-              v-model="formData.price"
+              v-model="price"
               label="Product price*"
               hint="Product price in lkr"
               suffix="Rs"
@@ -106,24 +98,27 @@
                 val => val > 0 || 'Please enter a real price'
               ]"
             />
-            <div align="right" class="text-teal q-py-md">
-                <q-btn label="Reset" flat class="q-ml-sm" @click="onReset"/>
-                <q-btn v-if="storeCustomer.isNewProduct" label="Add" @click="AddProduct" />
-                <q-btn v-else label="Edit" @click="editProduct" />
-            </div>
+
+      <div align="right" class="text-teal q-py-md">
+          <q-btn label="Reset" flat class="q-ml-sm" @click="onReset"/>
+          <q-btn v-if="isNewProduct" label="Add" @click="AddProduct" />
+          <q-btn v-else label="Edit" @click="editProduct" />
+
+        <!-- <q-btn label="Reset" type="reset" flat class="q-ml-sm" />
+        <q-btn label="Submit" type="submit" /> -->
+      </div>
           </q-form>
         </q-card-section>
       </q-card>
     </q-dialog>
-    <!--New product Form dialog end -->
+    <!-- Form dialog end -->
   </q-page>
 </template>
 
 <script>
-import { defineComponent, ref, onMounted, reactive } from 'vue'
-import { useCustomerStore } from 'src/stores/customers';
+import { defineComponent, ref, onMounted } from 'vue'
+import axios from 'axios'
 import { useQuasar } from 'quasar'
-import { api } from 'src/boot/axios';
 
 const columns = [
   {
@@ -143,39 +138,40 @@ const columns = [
 ]
 
 export default defineComponent({
-  name: 'CustomersPage',
+  name: 'ProductsPage',
+  components: {
+    // NewProduct,
+  },
   setup() {
-    const storeCustomer = useCustomerStore()
+
     const $q = useQuasar()
 
-    const selectedRow = ref(storeCustomer.selectedRow)
-    const productsData = ref(storeCustomer.productsData)
+    const selected = ref([])
+    const productsData = ref([])
     const filter = ref('')
 
-    const formData = ref({
-      code: null,
-      name: null,
-      brand: null,
-      price: null,
-    })
+    const productForm = ref(false)
+    const isNewProduct = ref(true)
 
-    const onReset = () => {
-      formData.value.code = null
-      formData.value.name = null
-      formData.value.brand = null
-      formData.value.price = null
-    }
+    // const form = ref([
+    //   code,
+    //   name,
+    //   brand,
+    //   price
+    // ])
 
-    const onClosePopup = () => {
-      onReset()
-      storeCustomer.isNewProduct = true
-    }
+    // Form constants
+    const code = ref(null)
+    const name = ref(null)
+    const brand = ref(null)
+    const price = ref(null)
 
-    const getProducts = async() => {
+    const getProducts = async () => {
       try {
-        const response = await api.get('http://localhost:5000/api/products/getproducts')
-        storeCustomer.productsData = response.data
-        // storeCustomer.selectedRow = []
+        const response = await axios.get('http://localhost:5000/api/products/getproducts')
+        productsData.value = await response.data
+        selected.value = []
+
       } catch (error) {
         console.log(error);
       }
@@ -183,51 +179,47 @@ export default defineComponent({
 
     const AddProduct = async () => {
       const newProduct = {
-          code: formData.value.code,
-          name: formData.value.name,
-          brand: formData.value.brand,
-          price: formData.value.price
-          // code: storeCustomer.code,
-          // name: storeCustomer.name,
-          // brand: storeCustomer.brand,
-          // price: storeCustomer.price
+          code: code.value,
+          name: name.value,
+          brand: brand.value,
+          price: price.value
         }
-        await api.post('http://localhost:5000/api/products/addproducts', newProduct)
+        await axios.post('http://localhost:5000/api/products/addproducts', newProduct)
           .then(() => {
               $q.notify({
                 progress: true,
                 message: 'Product added',
                 color: 'teal',
+                // textColor: 'primary',
                 position: 'top'
             })
-            storeCustomer.showProductForm = false
-            // storeCustomer.onReset()
-            onReset()
             getProducts()
+            productForm.value = false
         })
+        onReset()
     }
 
     const editProductFormBtn = () => {
-      if (selectedRow.value[0]) {
-        storeCustomer.showProductForm = true
-        storeCustomer.isNewProduct = false
+      if (selected.value[0]) {
+        productForm.value = true
+        isNewProduct.value = false;
 
-        formData.value.code = selectedRow.value[0].code;
-        formData.value.name = selectedRow.value[0].name;
-        formData.value.brand = selectedRow.value[0].brand;
-        formData.value.price = selectedRow.value[0].price;
+        code.value = selected.value[0].code;
+        name.value = selected.value[0].name;
+        brand.value = selected.value[0].brand;
+        price.value = selected.value[0].price;
       }
     }
 
     const editProduct = async () => {
       const editedProduct = {
-        productId: selectedRow.value[0]._id,
-        code: formData.value.code,
-        name: formData.value.name,
-        brand: formData.value.brand,
-        price: formData.value.price
+        productId: selected.value[0]._id,
+        code: code.value,
+        name: name.value,
+        brand: brand.value,
+        price: price.value
       }
-      await api.put('http://localhost:5000/api/products/updateproducts', editedProduct)
+      await axios.put('http://localhost:5000/api/products/updateproducts', editedProduct)
         .then((res) => {
           $q.notify({
                 progress: true,
@@ -235,16 +227,16 @@ export default defineComponent({
                 color: 'teal',
                 position: 'top'
           })
-          onReset()
           getProducts()
-          storeCustomer.showProductForm = false
+          productForm.value = false
         })
     }
 
     const removeProduct = async () => {
-      const productId = selectedRow.value[0]._id
-      if (selectedRow.value.length =! 0) {
-        await api.delete(`http://localhost:5000/api/products/deleteproducts/${productId}`)
+      const productId = selected.value[0]._id
+
+      if (selected.value.length =! 0) {
+        await axios.delete(`http://localhost:5000/api/products/deleteproducts/${productId}`)
         .then((res) => {
           $q.notify({
               progress: true,
@@ -253,33 +245,65 @@ export default defineComponent({
               position: 'top'
           })
           getProducts()
-          storeCustomer.showProductForm = false
-          selectedRow.value = []
+          productForm.value = false
         })
       }
+    }
+
+    const onReset = () => {
+      code.value = null
+      name.value = null
+      brand.value = null
+      price.value = null
     }
 
     onMounted(getProducts)
 
     return {
-      storeCustomer,
-
-      selectedRow,
+      selected,
       columns,
       productsData,
       filter,
-      formData,
 
-      onReset,
-      onClosePopup,
+      // Form
+      code,
+      name,
+      brand,
+      price,
+
+      productForm,
+      isNewProduct,
+
       getProducts,
       AddProduct,
       editProductFormBtn,
       editProduct,
       removeProduct,
+      onReset,
+
+      onSubmit() {
+        const newProduct = {
+          code: code.value,
+          name: name.value,
+          brand: brand.value,
+          price: price.value
+        }
+        axios.post('http://localhost:5000/api/products/addproducts', newProduct)
+          .then(() => {
+            setTimeout(() => {
+              $q.notify({
+                progress: true,
+                message: 'Product added successfully',
+                color: 'teal',
+                position: 'top'
+              })
+            }, 2000)
+          })
+      },
+
 
       getSelectedString() {
-        return selectedRow.value.length === 0 ? '' : `${selectedRow.value.length} record${selectedRow.value.length > 1 ? 's' : ''} selected of ${storeCustomer.productsData.length}`
+        return selected.value.length === 0 ? '' : `${selected.value.length} record${selected.value.length > 1 ? 's' : ''} selected of ${productsData.value.length}`
       }
     }
   }
@@ -288,6 +312,7 @@ export default defineComponent({
 
 <style>
 .table-container {
+  /* background-color: aqua; */
   width: 80%;
 }
 </style>
