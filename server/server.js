@@ -5,8 +5,10 @@ import morgan from 'morgan';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import productRouter from './routes/productsRoutes.js';
+import customerRouter from './routes/customersRoutes.js';
 import userRouter from './routes/userRoutes.js';
 import billsRouter from './routes/billsRoutes.js';
+import supplierRouter from './routes/suppliersRoutes.js';
 //require('colors');
 
 dotenv.config();
@@ -30,6 +32,8 @@ app.use(morgan("dev"));
 
 //routes
 app.use('/api/products/', productRouter);
+app.use('/api/customers/', customerRouter);
+app.use('/api/suppliers/', supplierRouter);
 app.use('/api/users/', userRouter);
 app.use('/api/bills/', billsRouter);
 

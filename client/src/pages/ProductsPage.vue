@@ -1,14 +1,17 @@
 <template>
   <q-page class="flex flex-center">
     <div class="q-pa-md table-container">
-      <q-table title="Products" class="q-pa-sm" :rows="storeCustomer.productsData" :columns="columns" row-key="code"
-        :selected-rows-label="getSelectedString" selection="single" v-model:selected="selectedRow" >
-        <!-- <template v-slot:top>
-          <p>Products</p>
-        </template> -->
+      <q-card class="my-card">
+        <q-card-section class="bg-primary text-white">
+          <div class="text-h6">Products</div>
+          <!-- <div class="text-subtitle2">by John Doe</div> -->
+        </q-card-section>
+      </q-card>
+      <q-table title="Products" class="q-pa-sm" :rows="tableData" :columns="columns" row-key="code" :pagination="pagination"
+        :filter="filter" :selected-rows-label="getSelectedString" selection="single" v-model:selected="selectedRow" >
         <template v-slot:top>
           <div v-if="selectedRow.length === 0">
-            <q-btn flat round color="green" icon="add" @click="storeCustomer.showProductForm=true">
+            <q-btn flat round color="green" icon="add" @click="storeCommon.showForm=true">
               <q-tooltip anchor="top middle" self="bottom middle" :offset="[10, 10]">
                 <strong>Add new product</strong>
               </q-tooltip>
@@ -31,36 +34,35 @@
                 <strong>Add new product</strong>
               </q-tooltip>
             </q-btn>
-            <q-btn flat round class="q-ml-sm" color="primary" icon="edit" @click="editProductFormBtn" >
+            <q-btn flat round class="q-ml-sm" color="primary" icon="edit" @click="editForm" >
               <q-tooltip anchor="top middle" self="bottom middle" :offset="[10, 10]">
                 <strong>Edit product</strong>
               </q-tooltip>
             </q-btn>
-            <q-btn flat round class="q-ml-sm" color="red" icon="delete" @click="removeProduct">
+            <q-btn flat round class="q-ml-sm" color="red" icon="delete" @click="remove">
               <q-tooltip anchor="top middle" self="bottom middle" :offset="[10, 10]">
                 <strong>Remove product</strong>
               </q-tooltip>
             </q-btn>
           </div>
           <q-space />
-          <q-input borderless dense debounce="300" color="primary" v-model="filter">
+          <q-input borderless dense debounce="300" color="primary" placeholder="Search" v-model="filter">
             <template v-slot:append>
               <q-icon name="search" />
             </template>
           </q-input>
-
         </template>
       </q-table>
     </div>
 
     <!-- New product form dialog begin -->
     <q-dialog
-      v-model="storeCustomer.showProductForm"
+      v-model="storeCommon.showForm"
       persistent
     >
       <q-card style="width: 500px; max-width: 80vw;">
         <q-toolbar>
-          <q-toolbar-title v-if="storeCustomer.isNewProduct"><span class="text-weight-bold">Add new product</span></q-toolbar-title>
+          <q-toolbar-title v-if="storeCommon.isNew"><span class="text-weight-bold">Add new product</span></q-toolbar-title>
           <q-toolbar-title v-else><span class="text-weight-bold">Edit product</span></q-toolbar-title>
           <q-btn @click="onClosePopup" flat round dense icon="close" v-close-popup />
         </q-toolbar>
@@ -107,9 +109,9 @@
               ]"
             />
             <div align="right" class="text-teal q-py-md">
-                <q-btn label="Reset" flat class="q-ml-sm" @click="onReset"/>
-                <q-btn v-if="storeCustomer.isNewProduct" label="Add" @click="AddProduct" />
-                <q-btn v-else label="Edit" @click="editProduct" />
+              <q-btn label="Reset" flat class="q-ml-sm" @click="onReset"/>
+              <q-btn v-if="storeCommon.isNew" label="Add" @click="AddNew" />
+              <q-btn v-else label="Edit" @click="edit" />
             </div>
           </q-form>
         </q-card-section>
@@ -121,7 +123,7 @@
 
 <script>
 import { defineComponent, ref, onMounted, reactive } from 'vue'
-import { useCustomerStore } from 'src/stores/customers';
+import { useCommonStore } from 'src/stores/common-store';
 import { useQuasar } from 'quasar'
 import { api } from 'src/boot/axios';
 
@@ -132,7 +134,7 @@ const columns = [
     label: 'Code',
     align: 'left',
     // field: row => row.code,
-    field: productsData => productsData.code,
+    field: tableData => tableData.code,
     // field: 'code',
     format: val => `${val}`,
     sortable: true
@@ -145,11 +147,12 @@ const columns = [
 export default defineComponent({
   name: 'CustomersPage',
   setup() {
-    const storeCustomer = useCustomerStore()
+    const storeCommon = useCommonStore()
     const $q = useQuasar()
 
-    const selectedRow = ref(storeCustomer.selectedRow)
-    const productsData = ref(storeCustomer.productsData)
+    const selectedRow = ref(storeCommon.selectedRow)
+    const tableData = ref([])
+    // const productsData = ref(storeCommon.productsData)
     const filter = ref('')
 
     const formData = ref({
@@ -168,31 +171,28 @@ export default defineComponent({
 
     const onClosePopup = () => {
       onReset()
-      storeCustomer.isNewProduct = true
+      storeCommon.isNew = true
     }
 
-    const getProducts = async() => {
+    const getData = async() => {
       try {
-        const response = await api.get('http://localhost:5000/api/products/getproducts')
-        storeCustomer.productsData = response.data
-        // storeCustomer.selectedRow = []
+        const response = await api.get(storeCommon.baseUrl + 'products/getproducts')
+        storeCommon.productsData = response.data
+        tableData.value = response.data
+        // storeCommon.selectedRow = []
       } catch (error) {
         console.log(error);
       }
     }
 
-    const AddProduct = async () => {
+    const AddNew = async () => {
       const newProduct = {
           code: formData.value.code,
           name: formData.value.name,
           brand: formData.value.brand,
           price: formData.value.price
-          // code: storeCustomer.code,
-          // name: storeCustomer.name,
-          // brand: storeCustomer.brand,
-          // price: storeCustomer.price
         }
-        await api.post('http://localhost:5000/api/products/addproducts', newProduct)
+        await api.post(storeCommon.baseUrl + 'products/addproducts', newProduct)
           .then(() => {
               $q.notify({
                 progress: true,
@@ -200,17 +200,16 @@ export default defineComponent({
                 color: 'teal',
                 position: 'top'
             })
-            storeCustomer.showProductForm = false
-            // storeCustomer.onReset()
+            storeCommon.showForm = false
             onReset()
-            getProducts()
+            getData()
         })
     }
 
-    const editProductFormBtn = () => {
+    const editForm = () => {
       if (selectedRow.value[0]) {
-        storeCustomer.showProductForm = true
-        storeCustomer.isNewProduct = false
+        storeCommon.showForm = true
+        storeCommon.isNew = false
 
         formData.value.code = selectedRow.value[0].code;
         formData.value.name = selectedRow.value[0].name;
@@ -219,7 +218,7 @@ export default defineComponent({
       }
     }
 
-    const editProduct = async () => {
+    const edit = async () => {
       const editedProduct = {
         productId: selectedRow.value[0]._id,
         code: formData.value.code,
@@ -227,7 +226,8 @@ export default defineComponent({
         brand: formData.value.brand,
         price: formData.value.price
       }
-      await api.put('http://localhost:5000/api/products/updateproducts', editedProduct)
+      await api.put(storeCommon.baseUrl + 'products/updateproducts', editedProduct)
+      // await api.put('http://localhost:5000/api/products/updateproducts', editedProduct)
         .then((res) => {
           $q.notify({
                 progress: true,
@@ -236,15 +236,15 @@ export default defineComponent({
                 position: 'top'
           })
           onReset()
-          getProducts()
-          storeCustomer.showProductForm = false
+          getData()
+          storeCommon.showForm = false
         })
     }
 
-    const removeProduct = async () => {
+    const remove = async () => {
       const productId = selectedRow.value[0]._id
       if (selectedRow.value.length =! 0) {
-        await api.delete(`http://localhost:5000/api/products/deleteproducts/${productId}`)
+        await api.delete(`${storeCommon.baseUrl}products/deleteproducts/${productId}`)
         .then((res) => {
           $q.notify({
               progress: true,
@@ -252,34 +252,41 @@ export default defineComponent({
               color: 'teal',
               position: 'top'
           })
-          getProducts()
-          storeCustomer.showProductForm = false
+          getData()
+          storeCommon.showForm = false
           selectedRow.value = []
         })
       }
     }
 
-    onMounted(getProducts)
+    onMounted(getData)
 
     return {
-      storeCustomer,
+      pagination: {
+        sortBy: 'code',
+        descending: false,
+        page: 1,
+        rowsPerPage: 10
+        // rowsNumber: xx if getting data from a server
+      },
+      storeCommon,
 
       selectedRow,
       columns,
-      productsData,
+      tableData,
       filter,
       formData,
 
       onReset,
       onClosePopup,
-      getProducts,
-      AddProduct,
-      editProductFormBtn,
-      editProduct,
-      removeProduct,
+      getData,
+      AddNew,
+      editForm,
+      edit,
+      remove,
 
       getSelectedString() {
-        return selectedRow.value.length === 0 ? '' : `${selectedRow.value.length} record${selectedRow.value.length > 1 ? 's' : ''} selected of ${storeCustomer.productsData.length}`
+        return selectedRow.value.length === 0 ? '' : `${selectedRow.value.length} record${selectedRow.value.length > 1 ? 's' : ''} selected of ${storeCommon.productsData.length}`
       }
     }
   }

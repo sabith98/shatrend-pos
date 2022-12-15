@@ -2,7 +2,7 @@
   <q-page class="flex flex-center">
     <div class="q-pa-md table-container">
       <q-table title="Products" class="q-pa-sm" :rows="productsData" :columns="columns" row-key="code"
-        :selected-rows-label="getSelectedString" selection="single" v-model:selected="selected" >
+        :filter="filter" :selected-rows-label="getSelectedString" selection="single" v-model:selected="selected" >
         <template v-slot:top>
           <q-btn flat round color="green" icon="add" @click="productForm=true">
             <q-tooltip anchor="top middle" self="bottom middle" :offset="[10, 10]">

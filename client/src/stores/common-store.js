@@ -1,13 +1,12 @@
 import { defineStore } from 'pinia';
-import { api } from 'src/boot/axios';
 
-export const useCustomerStore = defineStore('customer', {
+export const useCommonStore = defineStore('common', {
   state: () => ({
     baseUrl: 'http://localhost:5000/api/',
     selectedRow: [],
     productsData: [],
-    showProductForm: false,
-    isNewProduct: true,
+    showForm: false,
+    isNew: true,
   }),
   getters: {
     doubleCount: (state) => state.counter * 2,
